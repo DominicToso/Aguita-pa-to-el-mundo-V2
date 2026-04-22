@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Water Tracker">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <title>Water Tracker</title>
+    <style>
+        :root {
+            --blue-deep: #0077a8;
+            --blue-mid: #00a8d4;
+            --blue-light: #00d4f0;
+            --blue-pale: #e0f7ff;
+            --blue-bg: #c8efff;
+            --teal: #00c8c8;
+            --white: #ffffff;
+            --text-dark: #083d52;
+            --text-mid: #2a7a94;
+            --text-soft: #6aacbf;
+            --card-bg: rgba(255,255,255,0.72);
+            --shadow: 0 8px 32px rgba(0,100,160,0.13);
+            --radius: 24px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(170deg, #b8e8ff 0%, #d6f4ff 40%, #e8faff 100%);
+            min-height: 100vh;
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+
+        /* Floating bubbles background */
+        .bg-bubbles {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.25);
+            animation: floatUp linear infinite;
+        }
+        .bubble:nth-child(1)  { width:18px; height:18px; left:10%; animation-duration:12s; animation-delay:0s; }
+        .bubble:nth-child(2)  { width:10px; height:10px; left:25%; animation-duration:9s;  animation-delay:2s; }
+        .bubble:nth-child(3)  { width:24px; height:24px; left:40%; animation-duration:14s; animation-delay:5s; }
+        .bubble:nth-child(4)  { width:8px;  height:8px;  left:60%; animation-duration:8s;  animation-delay:1s; }
+        .bubble:nth-child(5)  { width:14px; height:14px; left:75%; animation-duration:11s; animation-delay:3s; }
+        .bubble:nth-child(6)  { width:20px; height:20px; left:88%; animation-duration:13s; animation-delay:7s; }
+        @keyframes floatUp {
+            0%   { transform: translateY(110vh) scale(1); opacity: 0; }
+            10%  { opacity: 1; }
+            90%  { opacity: 0.6; }
+            100% { transform: translateY(-10vh) scale(1.1); opacity: 0; }
+        }
+
+        .container {
+            max-width: 430px;
+            margin: 0 auto;
+            padding: 0 16px env(safe-area-inset-bottom);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ── HEADER ── */
+        .header {
+            padding-top: calc(env(safe-area-inset-top) + 20px);
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .date-badge {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-mid);
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+        .settings-btn {
+            width: 42px; height: 42px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.6);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: transform 0.2s;
+        }
+        .settings-btn:active { transform: scale(0.9); }
+
+        /* ── PENGUIN HERO ── */
+        .penguin-hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .penguin-wrap {
+            position: relative;
+            width: 170px;
+            height: 190px;
+        }
+        .penguin-shadow {
+            position: absolute;
+            bottom: -4px; left: 50%;
+            transform: translateX(-50%);
+            width: 90px; height: 18px;
+            background: rgba(0,100,150,0.15);
+            border-radius: 50%;
+            filter: blur(4px);
+        }
+        .penguin-svg { position: absolute; top: 0; left: 0; }
+
+        .mood-message {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--text-mid);
+            margin-top: 6px;
+            min-height: 22px;
+            text-align: center;
+            letter-spacing: -0.2px;
+        }
+
+        /* ── CIRCULAR PROGRESS ── */
+        .circle-progress-wrap {
+            display: flex;
+            justify-content: center;
+            margin: 16px 0 20px;
+        }
+        .circle-progress {
+            position: relative;
+            width: 200px;
+            height: 200px;
+        }
+        .circle-svg { transform: rotate(-90deg); }
+        .circle-track {
+            fill: none;
+            stroke: rgba(0,150,200,0.12);
+            stroke-width: 14;
+        }
+        .circle-fill {
+            fill: none;
+            stroke: url(#circleGrad);
+            stroke-width: 14;
+            stroke-linecap: round;
+            stroke-dasharray: 565;
+            stroke-dashoffset: 565;
+            transition: stroke-dashoffset 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+            filter: drop-shadow(0 0 6px rgba(0,200,220,0.5));
+        }
+        .circle-inner {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+        .circle-ml {
+            font-size: 40px;
+            font-weight: 900;
+            color: var(--blue-deep);
+            line-height: 1;
+            letter-spacing: -1px;
+        }
+        .circle-unit {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-soft);
+            margin-top: 2px;
+        }
+        .circle-pct {
+            font-size: 22px;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--blue-mid), var(--teal));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-top: 2px;
+        }
+
+        /* ── STATS ROW ── */
+        .stats-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            flex: 1;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 18px;
+            padding: 14px 12px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.7);
+            box-shadow: var(--shadow);
+        }
+        .stat-val {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--blue-deep);
+            letter-spacing: -0.5px;
+        }
+        .stat-lbl {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-soft);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        /* ── BOTTLE BUTTONS ── */
+        .section-label {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-soft);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            padding-left: 4px;
+        }
+        .bottles-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .bottle-btn {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255,255,255,0.8);
+            border-radius: 20px;
+            padding: 18px 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            touch-action: manipulation;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        .bottle-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 0; height: 0;
+            background: rgba(0,180,220,0.18);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.4s ease, height 0.4s ease, opacity 0.4s ease;
+            opacity: 0;
+        }
+        .bottle-btn.ripple::before {
+            width: 200px; height: 200px;
+            opacity: 0;
+        }
+        .bottle-btn:active {
+            transform: scale(0.93);
+            border-color: var(--blue-light);
+            box-shadow: 0 4px 20px rgba(0,200,220,0.3);
+        }
+        .bottle-icon { font-size: 28px; margin-bottom: 6px; display: block; }
+        .bottle-name {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+        }
+        .bottle-size {
+            font-size: 18px;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--blue-deep), var(--teal));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .bottle-size-unit {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-soft);
+        }
+
+        /* ── ACTION ROW ── */
+        .action-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 28px;
+        }
+        .action-btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 16px;
+            border: none;
+            font-family: 'Nunito', sans-serif;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            touch-action: manipulation;
+        }
+        .action-btn:active { transform: scale(0.95); }
+        .action-btn-secondary {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1.5px solid rgba(255,255,255,0.8);
+            color: var(--text-mid);
+            box-shadow: var(--shadow);
+        }
+        .action-btn-primary {
+            background: linear-gradient(135deg, var(--blue-mid), var(--teal));
+            color: white;
+            box-shadow: 0 6px 20px rgba(0,160,210,0.35);
+        }
+
+        /* ── STREAK ── */
+        .streak-card {
+            background: linear-gradient(135deg, var(--blue-deep), var(--blue-mid));
+            border-radius: 20px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 28px;
+            box-shadow: 0 8px 24px rgba(0,100,160,0.25);
+        }
+        .streak-icon { font-size: 32px; }
+        .streak-text { flex: 1; }
+        .streak-title { font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 1px; }
+        .streak-val { font-size: 22px; font-weight: 900; color: white; }
+
+        /* ── RIPPLE TOAST ── */
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: linear-gradient(135deg, var(--blue-deep), var(--teal));
+            color: white;
+            padding: 12px 24px;
+            border-radius: 100px;
+            font-size: 14px;
+            font-weight: 800;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 200;
+            white-space: nowrap;
+            box-shadow: 0 8px 24px rgba(0,100,160,0.3);
+            pointer-events: none;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ── MODALS ── */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(5,30,50,0.45);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            align-items: flex-end;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #f0faff;
+            width: 100%;
+            border-radius: 28px 28px 0 0;
+            padding: 28px 20px calc(env(safe-area-inset-bottom) + 20px);
+            max-height: 88vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to   { transform: translateY(0); }
+        }
+        .modal-handle {
+            width: 40px; height: 4px;
+            background: rgba(0,100,150,0.2);
+            border-radius: 2px;
+            margin: 0 auto 20px;
+        }
+        .modal-header {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--text-dark);
+            margin-bottom: 20px;
+            letter-spacing: -0.3px;
+        }
+        .modal-close {
+            position: absolute;
+            top: 24px; right: 20px;
+            width: 34px; height: 34px;
+            border: none;
+            background: rgba(0,150,200,0.1);
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            color: var(--blue-mid);
+            font-weight: 700;
+            line-height: 34px;
+            text-align: center;
+        }
+        .modal-close:active { background: rgba(0,150,200,0.2); }
+
+        .field-label {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-mid);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid rgba(0,150,200,0.15);
+            border-radius: 14px;
+            font-size: 16px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            margin-bottom: 16px;
+            background: white;
+            color: var(--text-dark);
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input:focus {
+            border-color: var(--blue-mid);
+            box-shadow: 0 0 0 3px rgba(0,168,212,0.12);
+        }
+        .field-group { margin-bottom: 4px; }
+
+        .modal-btn-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .modal-btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 14px;
+            border: none;
+            font-family: 'Nunito', sans-serif;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            touch-action: manipulation;
+        }
+        .modal-btn:active { transform: scale(0.96); }
+        .modal-btn-cancel {
+            background: rgba(0,150,200,0.08);
+            color: var(--text-mid);
+        }
+        .modal-btn-save {
+            background: linear-gradient(135deg, var(--blue-mid), var(--teal));
+            color: white;
+            box-shadow: 0 4px 16px rgba(0,160,210,0.3);
+        }
+        .modal-btn-danger {
+            background: #fff0f0;
+            color: #d63031;
+            flex: 1;
+        }
+
+        /* Settings tabs */
+        .tab-row {
+            display: flex;
+            background: rgba(0,150,200,0.07);
+            border-radius: 14px;
+            padding: 4px;
+            margin-bottom: 20px;
+            gap: 4px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            border-radius: 10px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-soft);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background: white;
+            color: var(--blue-deep);
+            box-shadow: 0 2px 8px rgba(0,100,160,0.12);
+        }
+
+        .bottle-list-item {
+            background: white;
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(0,150,200,0.08);
+        }
+        .bottle-list-name { font-weight: 800; color: var(--text-dark); font-size: 14px; }
+        .bottle-list-size { font-size: 12px; color: var(--text-soft); margin-top: 2px; font-weight: 700; }
+        .bottle-list-actions { display: flex; gap: 8px; }
+        .bottle-list-actions button {
+            padding: 6px 14px;
+            border: 1.5px solid rgba(0,150,200,0.2);
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 800;
+            color: var(--blue-mid);
+        }
+        .bottle-list-actions button:active { background: rgba(0,150,200,0.08); }
+
+        .warn-box {
+            background: #fff8e1;
+            border: 1.5px solid #ffe082;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #c45000;
+        }
+
+        /* ── COMPLETE CELEBRATION ── */
+        .confetti-wrap {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 300;
+            display: none;
+        }
+        .confetti-wrap.active { display: block; }
+        .conf-piece {
+            position: absolute;
+            width: 10px; height: 10px;
+            border-radius: 2px;
+            animation: confettiFall 1.8s ease-in forwards;
+        }
+        @keyframes confettiFall {
+            0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="bg-bubbles">
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+</div>
+
+<div class="confetti-wrap" id="confetti"></div>
+<div class="toast" id="toast"></div>
+
+<div class="container">
+    <div class="header">
+        <div class="header-top">
+            <div class="date-badge" id="today-date">Wed, Apr 22</div>
+            <div class="settings-btn" onclick="openSettingsModal()">⚙️</div>
+        </div>
+    </div>
+
+    <!-- Penguin Hero -->
+    <div class="penguin-hero">
+        <div class="penguin-wrap">
+            <div class="penguin-shadow"></div>
+            <svg class="penguin-svg" width="170" height="190" viewBox="0 0 170 190" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="circleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#0096c8"/>
+                        <stop offset="100%" stop-color="#00d4d4"/>
+                    </linearGradient>
+                    <style>
+                        @keyframes bodyBob {
+                            0%,100% { transform: translateY(0px); }
+                            50% { transform: translateY(-6px); }
+                        }
+                        @keyframes wingWave {
+                            0%,100% { transform: rotate(0deg); transform-origin: 52px 110px; }
+                            30% { transform: rotate(-22deg); transform-origin: 52px 110px; }
+                            60% { transform: rotate(-22deg); transform-origin: 52px 110px; }
+                            80% { transform: rotate(-10deg); transform-origin: 52px 110px; }
+                        }
+                        @keyframes eyeBlink {
+                            0%,90%,100% { transform: scaleY(1); }
+                            95% { transform: scaleY(0.1); }
+                        }
+                        @keyframes blushPulse {
+                            0%,100% { opacity: 0.5; }
+                            50% { opacity: 0.9; }
+                        }
+                        #penguin-body { animation: bodyBob 3s ease-in-out infinite; }
+                        #left-wing  { animation: wingWave 3s ease-in-out infinite; }
+                        #eye-l, #eye-r { animation: eyeBlink 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+                        #blush-l, #blush-r { animation: blushPulse 3s ease-in-out infinite; }
+                    </style>
+                </defs>
+
+                <g id="penguin-body">
+                    <!-- Body -->
+                    <ellipse cx="85" cy="140" rx="48" ry="52" fill="#1a1a1a"/>
+                    <!-- White belly -->
+                    <ellipse cx="85" cy="152" rx="36" ry="34" fill="#f5f5f5"/>
+                    <!-- Head -->
+                    <circle cx="85" cy="82" r="44" fill="#1a1a1a"/>
+                    <!-- Face white -->
+                    <ellipse cx="85" cy="88" rx="30" ry="28" fill="#f5f5f5"/>
+
+                    <!-- Eyes -->
+                    <g id="eye-l">
+                        <circle cx="73" cy="78" r="10" fill="white"/>
+                        <circle cx="75" cy="78" r="6" fill="#111"/>
+                        <circle cx="77" cy="76" r="2" fill="white"/>
+                    </g>
+                    <g id="eye-r">
+                        <circle cx="97" cy="78" r="10" fill="white"/>
+                        <circle cx="99" cy="78" r="6" fill="#111"/>
+                        <circle cx="101" cy="76" r="2" fill="white"/>
+                    </g>
+
+                    <!-- Beak -->
+                    <ellipse cx="85" cy="96" rx="8" ry="5" fill="#ffa500"/>
+                    <line x1="77" y1="96" x2="93" y2="96" stroke="#e08000" stroke-width="1.5"/>
+
+                    <!-- Blush -->
+                    <circle id="blush-l" cx="62" cy="88" r="8" fill="#ff8fa3" opacity="0.5"/>
+                    <circle id="blush-r" cx="108" cy="88" r="8" fill="#ff8fa3" opacity="0.5"/>
+
+                    <!-- Wings -->
+                    <g id="left-wing">
+                        <ellipse cx="46" cy="128" rx="16" ry="28" fill="#2a2a2a" transform="rotate(-10, 46, 128)"/>
+                    </g>
+                    <ellipse cx="124" cy="128" rx="16" ry="28" fill="#2a2a2a" transform="rotate(10, 124, 128)"/>
+
+                    <!-- Feet -->
+                    <ellipse cx="68" cy="184" rx="16" ry="7" fill="#ff6b35"/>
+                    <ellipse cx="102" cy="184" rx="16" ry="7" fill="#ff6b35"/>
+
+                    <!-- Water droplet on wing tip -->
+                    <g id="water-drop" opacity="0.9">
+                        <path d="M 38 108 Q 36 100 40 95 Q 44 100 42 108 Z" fill="#00c8e8"/>
+                    </g>
+
+                    <!-- Small scarf -->
+                    <rect x="56" y="118" width="58" height="10" rx="5" fill="#0096c8" opacity="0.85"/>
+                    <circle cx="85" cy="123" r="5" fill="#00d4d4" opacity="0.9"/>
+                </g>
+            </svg>
+        </div>
+        <div class="mood-message" id="mood-message">Stay hydrated! 💧</div>
+    </div>
+
+    <!-- Circular Progress -->
+    <div class="circle-progress-wrap">
+        <div class="circle-progress">
+            <svg class="circle-svg" width="200" height="200" viewBox="0 0 200 200">
+                <defs>
+                    <linearGradient id="circleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#0096c8"/>
+                        <stop offset="100%" stop-color="#00d4d4"/>
+                    </linearGradient>
+                </defs>
+                <circle class="circle-track" cx="100" cy="100" r="90"/>
+                <circle class="circle-fill" id="circle-fill" cx="100" cy="100" r="90"/>
+            </svg>
+            <div class="circle-inner">
+                <div class="circle-ml" id="current-ml">0</div>
+                <div class="circle-unit">ml today</div>
+                <div class="circle-pct" id="percentage">0%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-val" id="goal-ml">2000</div>
+            <div class="stat-lbl">🎯 Goal</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-val" id="remaining-ml">2000</div>
+            <div class="stat-lbl">💧 Remaining</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-val" id="streak-val">0</div>
+            <div class="stat-lbl">🔥 Streak</div>
+        </div>
+    </div>
+
+    <!-- Log Water -->
+    <div class="section-label">Log water</div>
+    <div class="bottles-grid" id="bottles-grid"></div>
+
+    <div class="action-row">
+        <button class="action-btn action-btn-secondary" onclick="openAddBottleModal()">+ Add</button>
+        <button class="action-btn action-btn-primary" onclick="undoLast()">↩ Undo</button>
+    </div>
+</div>
+
+<!-- Add Bottle Modal -->
+<div class="modal" id="addBottleModal">
+    <div class="modal-content" style="position:relative;">
+        <div class="modal-handle"></div>
+        <button class="modal-close" onclick="closeAddBottleModal()">✕</button>
+        <div class="modal-header" id="addBottleTitle">Add container</div>
+        <div class="field-group">
+            <label class="field-label">Name</label>
+            <input type="text" id="bottleName" placeholder="e.g., Big bottle">
+        </div>
+        <div class="field-group">
+            <label class="field-label">Volume (ml)</label>
+            <input type="number" id="bottleVolume" placeholder="e.g., 500" min="1">
+        </div>
+        <div class="field-group">
+            <label class="field-label">Icon</label>
+            <div id="icon-picker" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+            </div>
+        </div>
+        <div class="modal-btn-row">
+            <button class="modal-btn modal-btn-cancel" onclick="closeAddBottleModal()">Cancel</button>
+            <button class="modal-btn modal-btn-save" onclick="saveBottle()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal" id="settingsModal">
+    <div class="modal-content" style="position:relative;">
+        <div class="modal-handle"></div>
+        <button class="modal-close" onclick="closeSettingsModal()">✕</button>
+        <div class="modal-header">Settings</div>
+
+        <div class="tab-row">
+            <button class="tab-btn active" onclick="switchTab('goal', this)">Goal</button>
+            <button class="tab-btn" onclick="switchTab('bottles', this)">Containers</button>
+            <button class="tab-btn" onclick="switchTab('data', this)">Data</button>
+        </div>
+
+        <div id="goalTab">
+            <div class="field-group">
+                <label class="field-label">Daily goal (ml)</label>
+                <input type="number" id="dailyGoal" placeholder="e.g., 2000" min="1">
+            </div>
+            <div class="modal-btn-row">
+                <button class="modal-btn modal-btn-save" onclick="saveGoal()">Save goal</button>
+            </div>
+        </div>
+
+        <div id="bottlesTab" style="display:none;">
+            <div id="bottlesList"></div>
+            <button class="modal-btn modal-btn-save" onclick="closeSettingsModal(); openAddBottleModal();" style="width:100%;margin-top:4px;">+ Add new</button>
+        </div>
+
+        <div id="dataTab" style="display:none;">
+            <div class="warn-box">⚠️ These actions cannot be undone.</div>
+            <div class="modal-btn-row">
+                <button class="modal-btn modal-btn-cancel" onclick="resetToday()">Reset today</button>
+                <button class="modal-btn modal-btn-danger" onclick="resetAll()">Clear all</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const ICONS = ['🧴','🥤','🍵','☕','🍶','🥛','🫗','💧','🫖','🍺'];
+    let selectedIcon = '💧';
+
+    let appState = {
+        bottles: [],
+        dailyGoal: 2000,
+        todayIntake: 0,
+        lastDate: new Date().toDateString(),
+        editingBottleId: null,
+        streak: 0,
+        lastGoalDate: null,
+        lastLogVolume: 0
+    };
+
+    const STORAGE_KEY = 'waterTrackerStateV2';
+    const CIRCUMFERENCE = 2 * Math.PI * 90; // 565.48
+
+    const MOODS = [
+        { threshold: 0,   msg: "Let's start hydrating! 🌊" },
+        { threshold: 10,  msg: "Good start! Keep it up 💧" },
+        { threshold: 25,  msg: "You're doing great! 🐧" },
+        { threshold: 50,  msg: "Halfway there! Amazing! ✨" },
+        { threshold: 75,  msg: "Almost full! So proud 🥹" },
+        { threshold: 100, msg: "Goal smashed! You legend 🎉" },
+    ];
+
+    function initApp() {
+        loadState();
+        checkMidnightReset();
+        renderBottles();
+        updateProgress();
+        renderBottlesList();
+        updateDateDisplay();
+        renderIconPicker();
+        if (appState.bottles.length === 0) addDefaultBottles();
+    }
+
+    function addDefaultBottles() {
+        appState.bottles = [
+            { id: Date.now(),     name: 'Big bottle', volume: 500, icon: '🧴' },
+            { id: Date.now() + 1, name: 'Cup',        volume: 250, icon: '🥤' },
+            { id: Date.now() + 2, name: 'Small glass',volume: 150, icon: '🫗' },
+            { id: Date.now() + 3, name: 'Thermos',    volume: 350, icon: '☕' },
+        ];
+        saveState();
+        renderBottles();
+        renderBottlesList();
+    }
+
+    function loadState() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try { appState = { ...appState, ...JSON.parse(saved) }; } catch(e) {}
+        }
+    }
+
+    function saveState() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+    }
+
+    function checkMidnightReset() {
+        const today = new Date().toDateString();
+        if (appState.lastDate !== today) {
+            // Check if goal was met yesterday for streak
+            const pct = appState.todayIntake / appState.dailyGoal;
+            if (pct >= 1) {
+                appState.streak = (appState.streak || 0) + 1;
+            } else {
+                appState.streak = 0;
+            }
+            appState.todayIntake = 0;
+            appState.lastDate = today;
+            saveState();
+        }
+    }
+
+    function logWater(volume, btnEl) {
+        appState.lastLogVolume = volume;
+        appState.todayIntake += volume;
+        saveState();
+        updateProgress();
+        if (btnEl) triggerRipple(btnEl);
+        showToast(`+${volume} ml 💧`);
+        if (appState.todayIntake >= appState.dailyGoal && (appState.todayIntake - volume) < appState.dailyGoal) {
+            setTimeout(triggerCelebration, 400);
+        }
+    }
+
+    function undoLast() {
+        if (!appState.lastLogVolume || appState.todayIntake <= 0) return;
+        appState.todayIntake = Math.max(0, appState.todayIntake - appState.lastLogVolume);
+        showToast(`Removed ${appState.lastLogVolume} ml`);
+        appState.lastLogVolume = 0;
+        saveState();
+        updateProgress();
+    }
+
+    function renderBottles() {
+        const grid = document.getElementById('bottles-grid');
+        grid.innerHTML = '';
+        appState.bottles.forEach(bottle => {
+            const btn = document.createElement('button');
+            btn.className = 'bottle-btn';
+            btn.innerHTML = `
+                <span class="bottle-icon">${bottle.icon || '💧'}</span>
+                <div class="bottle-name">${bottle.name}</div>
+                <div class="bottle-size">${bottle.volume} <span class="bottle-size-unit">ml</span></div>
+            `;
+            btn.onclick = () => logWater(bottle.volume, btn);
+            grid.appendChild(btn);
+        });
+    }
+
+    function updateProgress() {
+        const cur = appState.todayIntake;
+        const goal = appState.dailyGoal;
+        const pct = Math.min(Math.round((cur / goal) * 100), 100);
+        const rem = Math.max(goal - cur, 0);
+
+        document.getElementById('current-ml').textContent = cur;
+        document.getElementById('goal-ml').textContent = goal;
+        document.getElementById('percentage').textContent = pct + '%';
+        document.getElementById('remaining-ml').textContent = rem;
+        document.getElementById('streak-val').textContent = appState.streak || 0;
+
+        // Circular progress
+        const offset = CIRCUMFERENCE - (pct / 100) * CIRCUMFERENCE;
+        document.getElementById('circle-fill').style.strokeDashoffset = offset;
+        document.getElementById('circle-fill').style.strokeDasharray = CIRCUMFERENCE;
+
+        // Mood message
+        let mood = MOODS[0];
+        for (const m of MOODS) {
+            if (pct >= m.threshold) mood = m;
+        }
+        document.getElementById('mood-message').textContent = mood.msg;
+    }
+
+    function updateDateDisplay() {
+        const opts = { weekday: 'short', month: 'short', day: 'numeric' };
+        document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-US', opts);
+    }
+
+    function renderIconPicker() {
+        const picker = document.getElementById('icon-picker');
+        picker.innerHTML = '';
+        ICONS.forEach(icon => {
+            const btn = document.createElement('button');
+            btn.textContent = icon;
+            btn.style.cssText = `font-size:24px;padding:8px;border-radius:12px;border:2px solid transparent;background:white;cursor:pointer;transition:all 0.15s;`;
+            if (icon === selectedIcon) btn.style.borderColor = '#0096c8';
+            btn.onclick = () => {
+                selectedIcon = icon;
+                renderIconPicker();
+            };
+            picker.appendChild(btn);
+        });
+    }
+
+    function triggerRipple(btn) {
+        btn.classList.add('ripple');
+        setTimeout(() => btn.classList.remove('ripple'), 400);
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 1800);
+    }
+
+    function triggerCelebration() {
+        const wrap = document.getElementById('confetti');
+        wrap.innerHTML = '';
+        wrap.classList.add('active');
+        const colors = ['#0096c8','#00d4d4','#ffa500','#ff6b35','#ffffff','#00c896'];
+        for (let i = 0; i < 60; i++) {
+            const p = document.createElement('div');
+            p.className = 'conf-piece';
+            p.style.cssText = `
+                left:${Math.random()*100}%;
+                background:${colors[Math.floor(Math.random()*colors.length)]};
+                animation-delay:${Math.random()*0.8}s;
+                animation-duration:${1.4 + Math.random()*0.8}s;
+                width:${6+Math.random()*8}px;
+                height:${6+Math.random()*8}px;
+                border-radius:${Math.random()>0.5?'50%':'3px'};
+            `;
+            wrap.appendChild(p);
+        }
+        setTimeout(() => { wrap.innerHTML=''; wrap.classList.remove('active'); }, 2800);
+    }
+
+    // ── Modal logic ──
+    function openAddBottleModal() {
+        appState.editingBottleId = null;
+        document.getElementById('bottleName').value = '';
+        document.getElementById('bottleVolume').value = '';
+        document.getElementById('addBottleTitle').textContent = 'Add container';
+        selectedIcon = '💧';
+        renderIconPicker();
+        document.getElementById('addBottleModal').classList.add('active');
+    }
+    function closeAddBottleModal() {
+        document.getElementById('addBottleModal').classList.remove('active');
+    }
+    function saveBottle() {
+        const name = document.getElementById('bottleName').value.trim();
+        const volume = parseInt(document.getElementById('bottleVolume').value);
+        if (!name || !volume || volume <= 0) { alert('Fill in all fields'); return; }
+        if (appState.editingBottleId) {
+            const b = appState.bottles.find(b => b.id === appState.editingBottleId);
+            b.name = name; b.volume = volume; b.icon = selectedIcon;
+        } else {
+            appState.bottles.push({ id: Date.now(), name, volume, icon: selectedIcon });
+        }
+        saveState(); renderBottles(); renderBottlesList(); closeAddBottleModal();
+    }
+    function editBottle(id) {
+        const b = appState.bottles.find(b => b.id === id);
+        appState.editingBottleId = id;
+        document.getElementById('bottleName').value = b.name;
+        document.getElementById('bottleVolume').value = b.volume;
+        document.getElementById('addBottleTitle').textContent = 'Edit container';
+        selectedIcon = b.icon || '💧';
+        renderIconPicker();
+        document.getElementById('settingsModal').classList.remove('active');
+        document.getElementById('addBottleModal').classList.add('active');
+    }
+    function deleteBottle(id) {
+        if (confirm('Delete this container?')) {
+            appState.bottles = appState.bottles.filter(b => b.id !== id);
+            saveState(); renderBottles(); renderBottlesList();
+        }
+    }
+    function renderBottlesList() {
+        const list = document.getElementById('bottlesList');
+        list.innerHTML = '';
+        appState.bottles.forEach(b => {
+            const item = document.createElement('div');
+            item.className = 'bottle-list-item';
+            item.innerHTML = `
+                <div>
+                    <div class="bottle-list-name">${b.icon || '💧'} ${b.name}</div>
+                    <div class="bottle-list-size">${b.volume} ml</div>
+                </div>
+                <div class="bottle-list-actions">
+                    <button onclick="editBottle(${b.id})">Edit</button>
+                    <button onclick="deleteBottle(${b.id})" style="color:#d63031;border-color:#ffc0c0;">Del</button>
+                </div>
+            `;
+            list.appendChild(item);
+        });
+    }
+    function openSettingsModal() {
+        document.getElementById('dailyGoal').value = appState.dailyGoal;
+        document.getElementById('settingsModal').classList.add('active');
+        switchTab('goal', document.querySelector('.tab-btn'));
+    }
+    function closeSettingsModal() {
+        document.getElementById('settingsModal').classList.remove('active');
+    }
+    function switchTab(tab, el) {
+        document.getElementById('goalTab').style.display    = tab === 'goal'    ? 'block' : 'none';
+        document.getElementById('bottlesTab').style.display = tab === 'bottles' ? 'block' : 'none';
+        document.getElementById('dataTab').style.display    = tab === 'data'    ? 'block' : 'none';
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        if (el) el.classList.add('active');
+    }
+    function saveGoal() {
+        const goal = parseInt(document.getElementById('dailyGoal').value);
+        if (!goal || goal <= 0) { alert('Enter a valid goal'); return; }
+        appState.dailyGoal = goal;
+        saveState(); updateProgress(); closeSettingsModal();
+    }
+    function resetToday() {
+        if (confirm("Reset today's intake?")) {
+            appState.todayIntake = 0; appState.lastLogVolume = 0;
+            saveState(); updateProgress();
+        }
+    }
+    function resetAll() {
+        if (confirm('Delete all data?')) {
+            appState = { bottles:[], dailyGoal:2000, todayIntake:0, lastDate:new Date().toDateString(), editingBottleId:null, streak:0, lastLogVolume:0 };
+            saveState(); addDefaultBottles(); updateProgress(); closeSettingsModal();
+        }
+    }
+
+    // Close on outside tap
+    document.getElementById('addBottleModal').addEventListener('click', e => { if (e.target.id === 'addBottleModal') closeAddBottleModal(); });
+    document.getElementById('settingsModal').addEventListener('click',  e => { if (e.target.id === 'settingsModal')  closeSettingsModal();  });
+
+    setInterval(checkMidnightReset, 60000);
+    window.addEventListener('load', initApp);
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+</script>
+</body>
+</html>
